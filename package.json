@@ -1,0 +1,9 @@
+{
+  "name": "co-tuong-3d-threejs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Co tuong 3D using local Three.js modules",
+  "scripts": {
+    "dev": "python3 -m http.server 5173"
+  }
+}

@@ -1,0 +1,108 @@
+:root {
+  color-scheme: light;
+  --hud-bg: rgba(23, 19, 16, 0.78);
+  --hud-border: rgba(255, 205, 150, 0.35);
+  --hud-text: #fff8ea;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: radial-gradient(circle at 20% 20%, #4f4238, #14110f 60%);
+}
+
+#scene {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  max-width: min(90vw, 420px);
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  color: var(--hud-text);
+  backdrop-filter: blur(8px);
+}
+
+.hud h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+}
+
+.hud p {
+  margin: 6px 0;
+  font-size: clamp(0.84rem, 1.7vw, 0.96rem);
+  line-height: 1.4;
+}
+
+.controls {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls label {
+  font-size: 0.9rem;
+  color: #ffd89c;
+}
+
+.controls select,
+.controls button {
+  border: 1px solid rgba(255, 206, 154, 0.5);
+  background: rgba(36, 27, 20, 0.92);
+  color: #fff8ea;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.86rem;
+}
+
+.controls button {
+  cursor: pointer;
+}
+
+.controls button:hover {
+  background: rgba(82, 53, 32, 0.95);
+}
+
+#selected-piece {
+  margin-top: 10px;
+  font-weight: 700;
+  color: #ffd89c;
+}
+
+#turn-text {
+  font-weight: 700;
+  color: #aee3ff;
+}
+
+#status-text {
+  color: #ffcf9a;
+  min-height: 1.2em;
+}
+
+@media (max-width: 720px) {
+  .hud {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    max-width: none;
+    padding: 12px;
+  }
+}
