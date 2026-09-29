@@ -47,11 +47,13 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x120f0c);
-scene.fog = new THREE.Fog(0x120f0c, 32, 56);
+scene.background = new THREE.Color(0x2b231d);
+scene.fog = new THREE.Fog(0x2b231d, 38, 70);
 
 const camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 0.1, 160);
 camera.position.set(0, 24, 28);
@@ -64,10 +66,10 @@ controls.minDistance = 16;
 controls.maxDistance = 56;
 controls.maxPolarAngle = Math.PI * 0.48;
 
-const hemi = new THREE.HemisphereLight(0xfff2d8, 0x3c3329, 0.6);
+const hemi = new THREE.HemisphereLight(0xfff4e0, 0x6b5a48, 0.95);
 scene.add(hemi);
 
-const keyLight = new THREE.DirectionalLight(0xfff0dd, 1.2);
+const keyLight = new THREE.DirectionalLight(0xfff3e2, 1.6);
 keyLight.position.set(16, 24, 12);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(2048, 2048);
@@ -79,7 +81,11 @@ keyLight.shadow.camera.near = 2;
 keyLight.shadow.camera.far = 70;
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight(0x95a6ff, 0.28);
+const boardLight = new THREE.PointLight(0xffe2b8, 380, 60, 2);
+boardLight.position.set(0, 16, 2);
+scene.add(boardLight);
+
+const rimLight = new THREE.DirectionalLight(0xb4c0ff, 0.55);
 rimLight.position.set(-18, 13, -18);
 scene.add(rimLight);
 
@@ -157,7 +163,7 @@ animate();
 function createGround() {
   const floor = new THREE.Mesh(
     new THREE.CylinderGeometry(35, 38, 1.8, 72),
-    new THREE.MeshStandardMaterial({ color: 0x2a241f, roughness: 0.9, metalness: 0.06 }),
+    new THREE.MeshStandardMaterial({ color: 0x453a31, roughness: 0.9, metalness: 0.06 }),
   );
   floor.position.y = -1.3;
   floor.receiveShadow = true;
@@ -180,14 +186,14 @@ function createBoard() {
 
   const border = new THREE.Mesh(
     new THREE.BoxGeometry(boardWidth + 3.8, boardConfig.boardThickness, boardDepth + 3.8),
-    new THREE.MeshStandardMaterial({ color: 0x654633, roughness: 0.78, metalness: 0.06 }),
+    new THREE.MeshStandardMaterial({ color: 0x8a6244, roughness: 0.75, metalness: 0.06 }),
   );
   border.position.y = 0;
   border.castShadow = true;
   border.receiveShadow = true;
   root.add(border);
 
-  const boardTopMat = new THREE.MeshStandardMaterial({ color: 0xbf9568, roughness: 0.72, metalness: 0.04 });
+  const boardTopMat = new THREE.MeshStandardMaterial({ color: 0xd2a672, roughness: 0.7, metalness: 0.04 });
   const topNorth = new THREE.Mesh(new THREE.BoxGeometry(boardWidth, 0.22, halfDepth), boardTopMat);
   topNorth.position.set(0, boardTopY + 0.12, riverGap * 0.5 + halfDepth * 0.5);
   topNorth.receiveShadow = true;
@@ -199,7 +205,7 @@ function createBoard() {
 
   const riverBed = new THREE.Mesh(
     new THREE.BoxGeometry(boardWidth - 0.1, 0.08, riverGap + 0.18),
-    new THREE.MeshStandardMaterial({ color: 0x2d4f66, roughness: 0.56, metalness: 0.2 }),
+    new THREE.MeshStandardMaterial({ color: 0x3f6d8c, roughness: 0.56, metalness: 0.2 }),
   );
   riverBed.position.y = boardTopY + 0.09;
   root.add(riverBed);
