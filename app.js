@@ -87,6 +87,10 @@ const boardTopY = boardConfig.boardThickness * 0.5;
 const boardPickY = boardTopY + 0.24;
 const boardRayPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -boardPickY);
 
+const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xf0c9a0, roughness: 0.6, metalness: 0.05 });
+const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x1b1512, roughness: 0.7, metalness: 0.1 });
+const steelMaterial = new THREE.MeshStandardMaterial({ color: 0xc9d0d8, roughness: 0.25, metalness: 0.85 });
+
 const characterModels = {};
 const characterMixers = [];
 
@@ -516,11 +520,15 @@ function createPiece(type, side) {
 
   createPedestal(group, palette, 1);
 
-  if (type === "general") buildGeneral(group, palette);
-  if (type === "advisor") buildAdvisor(group, palette);
-  if (type === "elephant") buildElephant(group, palette);
-  if (type === "rook") buildRook(group, palette);
-  if (type === "cannon") buildCannon(group, palette);
+  const figure = new THREE.Group();
+  figure.rotation.y = side === "red" ? Math.PI * 0.5 : -Math.PI * 0.5;
+  group.add(figure);
+
+  if (type === "general") buildGeneral(figure, palette);
+  if (type === "advisor") buildAdvisor(figure, palette);
+  if (type === "elephant") buildElephant(figure, palette);
+  if (type === "rook") buildRook(figure, palette);
+  if (type === "cannon") buildCannon(figure, palette);
   if (type === "horse") buildHorse(group, palette);
   if (type === "soldier") buildSoldier(group, palette);
 
@@ -554,104 +562,131 @@ function createPedestal(group, palette, scale) {
   group.add(topRing);
 }
 
+function addMesh(group, geometry, material, x, y, z, rotation) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  if (rotation) mesh.rotation.set(rotation[0] || 0, rotation[1] || 0, rotation[2] || 0);
+  group.add(mesh);
+  return mesh;
+}
+
+// Nhân vật đứng: áo choàng, đai, vai, hai tay, đầu. Trả về độ cao đỉnh đầu.
+function addHumanoid(group, palette, { x = 0, y = 0.31, scale = 1, robeMaterial, armAngle = 0.35 } = {}) {
+  const s = scale;
+  const robe = robeMaterial || palette.primary;
+  const shape = new THREE.Group();
+  shape.position.set(x, y, 0);
+  group.add(shape);
+
+  addMesh(shape, new THREE.CylinderGeometry(0.2 * s, 0.34 * s, 0.82 * s, 20), robe, 0, 0.41 * s, 0);
+  const belt = addMesh(shape, new THREE.TorusGeometry(0.24 * s, 0.045 * s, 10, 24), palette.accent, 0, 0.56 * s, 0);
+  belt.rotation.x = Math.PI * 0.5;
+  const shoulders = addMesh(shape, new THREE.SphereGeometry(0.27 * s, 18, 14), palette.secondary, 0, 0.84 * s, 0);
+  shoulders.scale.set(1, 0.6, 1.25);
+  [-1, 1].forEach((side) => {
+    addMesh(shape, new THREE.CylinderGeometry(0.06 * s, 0.05 * s, 0.5 * s, 10), robe, 0.05 * s, 0.62 * s, side * 0.33 * s, [side * armAngle, 0, 0]);
+    addMesh(shape, new THREE.SphereGeometry(0.06 * s, 10, 8), skinMaterial, 0.05 * s, 0.4 * s, side * (0.33 + Math.sin(armAngle) * 0.25) * s);
+  });
+  addMesh(shape, new THREE.CylinderGeometry(0.07 * s, 0.08 * s, 0.1 * s, 12), skinMaterial, 0, 0.94 * s, 0);
+  addMesh(shape, new THREE.SphereGeometry(0.17 * s, 20, 16), skinMaterial, 0, 1.1 * s, 0);
+  // mắt và râu
+  [-1, 1].forEach((side) => addMesh(shape, new THREE.SphereGeometry(0.022 * s, 8, 8), darkMaterial, 0.15 * s, 1.13 * s, side * 0.06 * s));
+  return { shape, top: y + 1.27 * s };
+}
+
 function buildGeneral(group, palette) {
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.9, 20), palette.primary);
-  body.position.y = 0.83;
-  group.add(body);
-
-  const shoulders = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.2, 0.56), palette.secondary);
-  shoulders.position.y = 0.81;
-  group.add(shoulders);
-
-  const helm = new THREE.Mesh(new THREE.ConeGeometry(0.31, 0.5, 16), palette.primary);
-  helm.position.y = 1.45;
-  group.add(helm);
-
-  const crest = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), palette.accent);
-  crest.position.y = 1.72;
-  group.add(crest);
+  const { shape } = addHumanoid(group, palette, { scale: 1.12, robeMaterial: palette.primary, armAngle: 0.5 });
+  const s = 1.12;
+  // áo choàng sau lưng
+  addMesh(shape, new THREE.BoxGeometry(0.06 * s, 0.85 * s, 0.6 * s), palette.secondary, -0.24 * s, 0.5 * s, 0, [0, 0, 0.12]);
+  // mũ giáp vương miện
+  addMesh(shape, new THREE.CylinderGeometry(0.19 * s, 0.2 * s, 0.14 * s, 20), palette.accent, 0, 1.24 * s, 0);
+  addMesh(shape, new THREE.ConeGeometry(0.17 * s, 0.3 * s, 16), palette.secondary, 0, 1.46 * s, 0);
+  addMesh(shape, new THREE.SphereGeometry(0.06 * s, 12, 10), palette.accent, 0, 1.66 * s, 0);
+  // lông chim hai bên mũ
+  [-1, 1].forEach((side) => addMesh(shape, new THREE.ConeGeometry(0.035 * s, 0.5 * s, 8), palette.accent, -0.05 * s, 1.5 * s, side * 0.2 * s, [side * 0.5, 0, 0.35]));
+  // kiếm dựng trước ngực
+  addMesh(shape, new THREE.BoxGeometry(0.04 * s, 0.85 * s, 0.09 * s), steelMaterial, 0.3 * s, 0.6 * s, 0);
+  addMesh(shape, new THREE.BoxGeometry(0.07 * s, 0.05 * s, 0.3 * s), palette.accent, 0.3 * s, 0.2 * s, 0);
 }
 
 function buildAdvisor(group, palette) {
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.28, 1.02, 18), palette.primary);
-  body.position.y = 0.88;
-  group.add(body);
-
-  const mantle = new THREE.Mesh(new THREE.ConeGeometry(0.37, 0.46, 16), palette.secondary);
-  mantle.position.y = 0.72;
-  group.add(mantle);
-
-  const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), palette.accent);
-  tip.position.y = 1.53;
-  group.add(tip);
+  const { shape } = addHumanoid(group, palette, { scale: 0.98, robeMaterial: palette.primary, armAngle: 0.2 });
+  const s = 0.98;
+  // mũ quan văn: nón phẳng có hai cánh
+  addMesh(shape, new THREE.CylinderGeometry(0.15 * s, 0.17 * s, 0.2 * s, 18), darkMaterial, 0, 1.3 * s, 0);
+  addMesh(shape, new THREE.CylinderGeometry(0.19 * s, 0.19 * s, 0.03 * s, 18), palette.accent, 0, 1.4 * s, 0);
+  [-1, 1].forEach((side) => addMesh(shape, new THREE.BoxGeometry(0.03 * s, 0.03 * s, 0.4 * s), darkMaterial, -0.1 * s, 1.3 * s, side * 0.28 * s));
+  // cổ áo và râu
+  addMesh(shape, new THREE.ConeGeometry(0.09 * s, 0.24 * s, 10), darkMaterial, 0.11 * s, 0.98 * s, 0, [0, 0, Math.PI]);
+  // quạt lông trên tay
+  const fan = addMesh(shape, new THREE.CylinderGeometry(0.22 * s, 0.22 * s, 0.02 * s, 20, 1, false, 0, Math.PI), palette.accent, 0.3 * s, 0.55 * s, 0.38 * s, [Math.PI * 0.5, 0, 0]);
+  fan.rotation.y = Math.PI * 0.5;
 }
 
 function buildElephant(group, palette) {
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.43, 20, 18), palette.primary);
-  body.position.y = 0.8;
-  group.add(body);
-
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 18, 16), palette.secondary);
-  head.position.set(0.34, 0.89, 0);
-  group.add(head);
-
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.45, 14), palette.secondary);
-  trunk.position.set(0.55, 0.71, 0);
-  trunk.rotation.z = Math.PI * 0.32;
-  group.add(trunk);
-
-  const earL = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), palette.primary);
-  earL.scale.set(0.4, 0.95, 0.85);
-  earL.position.set(0.26, 0.96, 0.18);
-  group.add(earL);
-
-  const earR = earL.clone();
-  earR.position.z = -0.18;
-  group.add(earR);
-
-  const tusk = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 12), palette.accent);
-  tusk.position.set(0.69, 0.69, 0);
-  tusk.rotation.z = Math.PI * 0.44;
-  group.add(tusk);
+  const body = addMesh(group, new THREE.SphereGeometry(0.43, 20, 18), palette.primary, -0.05, 0.8, 0);
+  body.scale.set(1.15, 0.9, 0.95);
+  addMesh(group, new THREE.SphereGeometry(0.27, 18, 16), palette.secondary, 0.36, 0.86, 0);
+  addMesh(group, new THREE.CylinderGeometry(0.1, 0.07, 0.5, 14), palette.secondary, 0.58, 0.68, 0, [0, 0, Math.PI * 0.32]);
+  [-1, 1].forEach((side) => {
+    const ear = addMesh(group, new THREE.SphereGeometry(0.2, 16, 12), palette.primary, 0.26, 0.94, side * 0.2);
+    ear.scale.set(0.4, 0.95, 0.85);
+    addMesh(group, new THREE.ConeGeometry(0.05, 0.22, 12), palette.accent, 0.6, 0.62, side * 0.1, [0, 0, Math.PI * 0.44]);
+  });
+  // yên và người quản tượng ngồi trên lưng
+  addMesh(group, new THREE.BoxGeometry(0.6, 0.08, 0.5), palette.accent, -0.05, 1.18, 0);
+  const rider = new THREE.Group();
+  rider.position.set(-0.05, 0.87, 0);
+  group.add(rider);
+  const riderBody = addHumanoid(rider, palette, { scale: 0.62, robeMaterial: palette.secondary, armAngle: 0.5 });
+  addMesh(riderBody.shape, new THREE.ConeGeometry(0.16 * 0.62, 0.3 * 0.62, 14), palette.accent, 0, 1.4 * 0.62, 0);
 }
 
 function buildRook(group, palette) {
-  const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.49, 1.03, 22), palette.primary);
-  tower.position.y = 0.87;
-  group.add(tower);
-
-  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.48, 0.23, 22), palette.secondary);
-  roof.position.y = 1.44;
-  group.add(roof);
-
-  const battlementGeo = new THREE.BoxGeometry(0.14, 0.16, 0.18);
-  const radius = 0.47;
-  for (let i = 0; i < 6; i += 1) {
-    const angle = (i / 6) * Math.PI * 2;
-    const crenel = new THREE.Mesh(battlementGeo, palette.accent);
-    crenel.position.set(Math.cos(angle) * radius, 1.6, Math.sin(angle) * radius);
-    group.add(crenel);
-  }
+  // thân xe chiến
+  addMesh(group, new THREE.BoxGeometry(0.95, 0.16, 0.66), palette.secondary, 0, 0.5, 0);
+  addMesh(group, new THREE.BoxGeometry(0.95, 0.34, 0.06), palette.primary, 0, 0.7, 0.3);
+  addMesh(group, new THREE.BoxGeometry(0.95, 0.34, 0.06), palette.primary, 0, 0.7, -0.3);
+  addMesh(group, new THREE.BoxGeometry(0.06, 0.34, 0.66), palette.primary, -0.45, 0.7, 0);
+  // hai bánh xe nan hoa
+  [-1, 1].forEach((side) => {
+    const wheel = new THREE.Group();
+    wheel.position.set(0.05, 0.52, side * 0.42);
+    group.add(wheel);
+    addMesh(wheel, new THREE.TorusGeometry(0.26, 0.05, 10, 24), palette.accent, 0, 0, 0);
+    addMesh(wheel, new THREE.CylinderGeometry(0.07, 0.07, 0.1, 10), palette.accent, 0, 0, 0, [Math.PI * 0.5, 0, 0]);
+    for (let i = 0; i < 3; i += 1) {
+      addMesh(wheel, new THREE.BoxGeometry(0.5, 0.035, 0.035), palette.accent, 0, 0, 0, [0, 0, (i * Math.PI) / 3]);
+    }
+  });
+  // càng xe
+  addMesh(group, new THREE.CylinderGeometry(0.03, 0.03, 0.7, 8), palette.accent, 0.7, 0.55, 0, [0, 0, Math.PI * 0.5]);
+  // người đánh xe đứng trên xe, cầm cờ
+  const driver = addHumanoid(group, palette, { x: -0.05, y: 0.58, scale: 0.78, armAngle: 0.4 });
+  const s = 0.78;
+  addMesh(driver.shape, new THREE.ConeGeometry(0.19 * s, 0.32 * s, 16), palette.secondary, 0, 1.36 * s, 0);
+  addMesh(driver.shape, new THREE.CylinderGeometry(0.02, 0.02, 1.0, 8), palette.accent, 0.28 * s, 0.9 * s, 0.3 * s);
+  addMesh(driver.shape, new THREE.BoxGeometry(0.02, 0.28, 0.4), palette.secondary, 0.28 * s, 1.28, 0.5 * s);
 }
 
 function buildCannon(group, palette) {
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.58, 0.43, 20), palette.primary);
-  base.position.y = 0.53;
-  group.add(base);
-
-  const carriage = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.25, 0.54), palette.secondary);
-  carriage.position.y = 0.86;
-  group.add(carriage);
-
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.16, 18), palette.accent);
-  barrel.rotation.z = Math.PI * 0.5;
-  barrel.position.y = 0.92;
-  group.add(barrel);
-
-  const muzzle = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 10, 24), palette.secondary);
-  muzzle.position.set(0.58, 0.92, 0);
-  muzzle.rotation.y = Math.PI * 0.5;
-  group.add(muzzle);
+  // bệ pháo và nòng
+  addMesh(group, new THREE.BoxGeometry(0.9, 0.16, 0.6), palette.secondary, 0.1, 0.44, 0);
+  [-1, 1].forEach((side) => {
+    const wheel = addMesh(group, new THREE.CylinderGeometry(0.2, 0.2, 0.08, 18), palette.accent, 0.15, 0.44, side * 0.36, [Math.PI * 0.5, 0, 0]);
+    wheel.name = "wheel";
+  });
+  const barrel = addMesh(group, new THREE.CylinderGeometry(0.13, 0.17, 1.0, 18), palette.primary, 0.3, 0.72, 0, [0, 0, Math.PI * 0.5 - 0.22]);
+  addMesh(group, new THREE.TorusGeometry(0.14, 0.035, 10, 24), palette.accent, 0.78, 0.83, 0, [0, Math.PI * 0.5, -0.22]);
+  addMesh(group, new THREE.SphereGeometry(0.15, 14, 12), palette.primary, -0.2, 0.62, 0);
+  barrel.userData.barrel = true;
+  // pháo thủ đứng phía sau, tay cầm ngòi
+  const gunner = addHumanoid(group, palette, { x: -0.42, y: 0.31, scale: 0.72, armAngle: 0.5 });
+  const s = 0.72;
+  addMesh(gunner.shape, new THREE.CylinderGeometry(0.18 * s, 0.2 * s, 0.1 * s, 16), palette.secondary, 0, 1.25 * s, 0);
+  addMesh(gunner.shape, new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), darkMaterial, 0.3 * s, 0.6 * s, 0.3 * s, [0, 0, 0.5]);
+  addMesh(gunner.shape, new THREE.SphereGeometry(0.045, 10, 8), new THREE.MeshStandardMaterial({ color: 0xff8a3a, emissive: 0xff5a10, emissiveIntensity: 1.2 }), 0.42 * s, 0.85 * s, 0.3 * s);
 }
 
 async function loadCharacterModels() {

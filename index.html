@@ -25,7 +25,12 @@
       </div>
     </header>
 
-    <aside class="panel" aria-label="Bảng điều khiển">
+    <button id="panel-toggle" class="panel-toggle" type="button" aria-controls="panel" aria-expanded="true" aria-label="Ẩn bảng điều khiển">
+      <span class="toggle-icon" aria-hidden="true"></span>
+      <span class="toggle-text">Ẩn</span>
+    </button>
+
+    <aside class="panel" id="panel" aria-label="Bảng điều khiển">
       <section class="turn-card">
         <span class="label">Trạng thái ván</span>
         <p id="turn-text" data-side="red">Lượt: Đỏ</p>
@@ -62,6 +67,27 @@
       </details>
     </aside>
 
+    <script>
+      (function () {
+        var panel = document.getElementById("panel");
+        var toggle = document.getElementById("panel-toggle");
+        var text = toggle.querySelector(".toggle-text");
+        function setHidden(hidden) {
+          panel.classList.toggle("is-hidden", hidden);
+          toggle.classList.toggle("is-collapsed", hidden);
+          toggle.setAttribute("aria-expanded", String(!hidden));
+          toggle.setAttribute("aria-label", hidden ? "Hiện bảng điều khiển" : "Ẩn bảng điều khiển");
+          text.textContent = hidden ? "Hiện" : "Ẩn";
+        }
+        toggle.addEventListener("click", function () {
+          setHidden(!panel.classList.contains("is-hidden"));
+        });
+        var hideAfterStart = document.getElementById("new-game-btn");
+        hideAfterStart.addEventListener("click", function () {
+          if (window.matchMedia("(max-width: 720px)").matches) setHidden(true);
+        });
+      })();
+    </script>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

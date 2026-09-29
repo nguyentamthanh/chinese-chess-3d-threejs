@@ -97,6 +97,61 @@ body {
   backdrop-filter: blur(14px);
 }
 
+.panel {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.panel.is-hidden {
+  opacity: 0;
+  transform: translateX(24px);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.panel-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold-strong);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+}
+
+.panel-toggle:focus-visible {
+  outline: 2px solid var(--gold-strong);
+  outline-offset: 2px;
+}
+
+.toggle-icon {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s;
+}
+
+.panel-toggle.is-collapsed .toggle-icon {
+  transform: rotate(135deg);
+}
+
+/* Khi bảng mở, nút nằm phía trên bảng nên đẩy bảng xuống */
+.panel {
+  top: 76px;
+}
+
 .panel p {
   margin: 0;
 }
@@ -224,6 +279,11 @@ body {
 
   .brand-sub {
     display: none;
+  }
+
+  .panel-toggle {
+    top: 10px;
+    right: 10px;
   }
 
   .panel {
