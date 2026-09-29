@@ -545,9 +545,9 @@ function buildPalette(side) {
   }
 
   return {
-    primary: new THREE.MeshStandardMaterial({ color: 0x4d5667, roughness: 0.37, metalness: 0.36 }),
-    secondary: new THREE.MeshStandardMaterial({ color: 0x1c2230, roughness: 0.46, metalness: 0.32 }),
-    accent: new THREE.MeshStandardMaterial({ color: 0xb3bcc8, roughness: 0.29, metalness: 0.5 }),
+    primary: new THREE.MeshStandardMaterial({ color: 0x8b98b0, roughness: 0.37, metalness: 0.36 }),
+    secondary: new THREE.MeshStandardMaterial({ color: 0x4a556e, roughness: 0.46, metalness: 0.32 }),
+    accent: new THREE.MeshStandardMaterial({ color: 0xe6ecf5, roughness: 0.29, metalness: 0.5 }),
   };
 }
 
@@ -708,7 +708,7 @@ function addCharacterModel(group, type, side, { height, fitLength, rotationY, id
   if (!gltf) return false;
 
   const model = cloneSkinned(gltf.scene);
-  const tint = new THREE.Color(side === "red" ? 0xffc2b4 : 0xc4d0e6);
+  const tint = new THREE.Color(side === "red" ? 0xffc2b4 : 0xf2f7ff);
   model.traverse((child) => {
     if (!child.isMesh) return;
     child.frustumCulled = false;
