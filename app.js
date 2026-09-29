@@ -1,5 +1,7 @@
 import * as THREE from "./vendor/three.module.js";
 import { OrbitControls } from "./vendor/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "./vendor/addons/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "./vendor/addons/utils/SkeletonUtils.js";
 
 const boardConfig = {
   files: 9,
@@ -85,6 +87,9 @@ const boardTopY = boardConfig.boardThickness * 0.5;
 const boardPickY = boardTopY + 0.24;
 const boardRayPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -boardPickY);
 
+const characterModels = {};
+const characterMixers = [];
+
 const pieces = [];
 const pickTargets = [];
 const boardMap = new Map();
@@ -136,9 +141,11 @@ window.addEventListener("resize", onResize);
 modeDom.addEventListener("change", onModeChange);
 newGameButton.addEventListener("click", () => resetGame("Đã bắt đầu ván mới."));
 
+await loadCharacterModels();
 resetGame("Sẵn sàng bắt đầu ván cờ.");
 
 const clock = new THREE.Clock();
+let lastTime = 0;
 animate();
 
 function createGround() {
@@ -505,6 +512,7 @@ function worldToBoard(x, z) {
 function createPiece(type, side) {
   const group = new THREE.Group();
   const palette = buildPalette(side);
+  group.userData.side = side;
 
   createPedestal(group, palette, 1);
 
@@ -646,7 +654,59 @@ function buildCannon(group, palette) {
   group.add(muzzle);
 }
 
+async function loadCharacterModels() {
+  const loader = new GLTFLoader();
+  const sources = { horse: "./models/Horse.glb", soldier: "./models/Soldier.glb" };
+  await Promise.all(
+    Object.entries(sources).map(async ([type, url]) => {
+      try {
+        characterModels[type] = await loader.loadAsync(url);
+      } catch (error) {
+        console.warn(`Không nạp được ${url}, dùng mô hình dựng bằng code.`, error);
+      }
+    }),
+  );
+}
+
+function addCharacterModel(group, type, side, { height, fitLength, rotationY, idleClip }) {
+  const gltf = characterModels[type];
+  if (!gltf) return false;
+
+  const model = cloneSkinned(gltf.scene);
+  const tint = new THREE.Color(side === "red" ? 0xffc2b4 : 0xc4d0e6);
+  model.traverse((child) => {
+    if (!child.isMesh) return;
+    child.frustumCulled = false;
+    child.material = child.material.clone();
+    child.material.color.multiply(tint);
+  });
+
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(model, true);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const scale = fitLength ? fitLength / Math.max(size.x, size.z) : height / size.y;
+  model.scale.setScalar(scale);
+  model.position.set(-center.x * scale, 0.31 - box.min.y * scale, -center.z * scale);
+
+  const holder = new THREE.Group();
+  holder.rotation.y = rotationY + (side === "red" ? Math.PI : 0);
+  holder.add(model);
+  group.add(holder);
+
+  const clip = idleClip && gltf.animations.find((a) => a.name === idleClip);
+  if (clip) {
+    const mixer = new THREE.AnimationMixer(model);
+    mixer.clipAction(clip).play();
+    mixer.update(Math.random() * clip.duration);
+    characterMixers.push(mixer);
+  }
+  return true;
+}
+
 function buildHorse(group, palette) {
+  if (addCharacterModel(group, "horse", group.userData.side, { fitLength: 2.2, rotationY: 0 })) return;
+
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.3, 0.76, 16), palette.primary);
   body.position.y = 0.84;
   body.rotation.z = Math.PI * 0.5;
@@ -677,6 +737,8 @@ function buildHorse(group, palette) {
 }
 
 function buildSoldier(group, palette) {
+  if (addCharacterModel(group, "soldier", group.userData.side, { height: 1.6, rotationY: 0, idleClip: "Idle" })) return;
+
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.31, 0.68, 18), palette.primary);
   body.position.y = 0.72;
   group.add(body);
@@ -1352,6 +1414,7 @@ function updateHudStatus(message = "") {
   } else {
     turnTextDom.textContent = `Lượt: ${sideLabels[gameState.currentSide]}`;
   }
+  turnTextDom.dataset.side = gameState.winner || gameState.currentSide;
 
   if (message) {
     statusTextDom.textContent = message;
@@ -1376,6 +1439,9 @@ function animate() {
   requestAnimationFrame(animate);
 
   const t = clock.getElapsedTime();
+  const dt = t - lastTime;
+  lastTime = t;
+  characterMixers.forEach((mixer) => mixer.update(dt));
 
   pieces.forEach((piece) => {
     if (piece.userData.captured) return;

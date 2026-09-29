@@ -39,3 +39,7 @@ Mở trình duyệt tại:
 - Click vào quân: chọn quân
 - Click vào điểm đến hợp lệ: di chuyển quân
 - Đổi mode ở dropdown và bấm `Ván mới` để reset
+
+## Mô hình nhân vật
+
+Quân **Mã** dùng `models/Horse.glb` và quân **Tốt** dùng `models/Soldier.glb` (lấy từ thư mục ví dụ của [three.js](https://github.com/mrdoob/three.js), giấy phép MIT; ngựa do mirada.com, lính từ Mixamo). Nếu không nạp được file, game tự dùng mô hình dựng bằng code.

@@ -3,29 +3,64 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Co Tuong 3D - Three.js</title>
+    <meta name="description" content="Cờ Tướng 3D - chơi với máy hoặc 2 người ngay trên trình duyệt." />
+    <meta name="theme-color" content="#14110f" />
+    <title>Cờ Tướng 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="hud">
-      <h1>Cờ Tướng 3D</h1>
-      <p>Mô hình 3D cho: Tướng, Sĩ, Tượng, Xe, Pháo, Mã, Tốt.</p>
-      <p>Kéo chuột để xoay, lăn chuột để zoom, click quân để chọn và đi.</p>
-      <div class="controls">
-        <label for="game-mode">Chế độ:</label>
+    <canvas id="scene"></canvas>
+
+    <header class="brand">
+      <span class="brand-seal" aria-hidden="true">帥</span>
+      <div>
+        <h1>Cờ Tướng 3D</h1>
+        <p class="brand-sub">Xiangqi · Three.js</p>
+      </div>
+    </header>
+
+    <aside class="panel" aria-label="Bảng điều khiển">
+      <section class="turn-card">
+        <span class="label">Trạng thái ván</span>
+        <p id="turn-text" data-side="red">Lượt: Đỏ</p>
+        <p id="status-text" role="status" aria-live="polite">Sẵn sàng.</p>
+      </section>
+
+      <section class="info">
+        <div class="row">
+          <span class="label">Chế độ</span>
+          <span id="mode-text">Chế độ hiện tại: 1 người chơi với máy</span>
+        </div>
+        <div class="row">
+          <span class="label">Quân đang chọn</span>
+          <span id="selected-piece">Đang chọn: Chưa có</span>
+        </div>
+      </section>
+
+      <section class="controls">
+        <label for="game-mode">Chế độ chơi</label>
         <select id="game-mode">
           <option value="ai">1 người chơi với máy</option>
           <option value="pvp">2 người chơi</option>
         </select>
         <button id="new-game-btn" type="button">Ván mới</button>
-      </div>
-      <p id="mode-text">Chế độ hiện tại: 1 người chơi với máy</p>
-      <p id="turn-text">Lượt: Đỏ</p>
-      <p id="selected-piece">Đang chọn: Chưa có</p>
-      <p id="status-text">Sẵn sàng.</p>
-    </div>
+      </section>
 
-    <canvas id="scene"></canvas>
+      <details class="help">
+        <summary>Hướng dẫn</summary>
+        <ul>
+          <li>Kéo chuột để xoay bàn cờ</li>
+          <li>Lăn chuột để phóng to / thu nhỏ</li>
+          <li>Click quân để chọn, click điểm sáng để đi</li>
+        </ul>
+      </details>
+    </aside>
 
     <script type="module" src="./app.js"></script>
   </body>
