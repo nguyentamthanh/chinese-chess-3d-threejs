@@ -1352,6 +1352,7 @@ function updateHudStatus(message = "") {
   } else {
     turnTextDom.textContent = `Lượt: ${sideLabels[gameState.currentSide]}`;
   }
+  turnTextDom.dataset.side = gameState.winner || gameState.currentSide;
 
   if (message) {
     statusTextDom.textContent = message;
