@@ -91,6 +91,8 @@ const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xf0c9a0, roughness
 const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x1b1512, roughness: 0.7, metalness: 0.1 });
 const steelMaterial = new THREE.MeshStandardMaterial({ color: 0xc9d0d8, roughness: 0.25, metalness: 0.85 });
 
+const moveEffects = [];
+const cameraShake = { until: 0, strength: 0 };
 const characterModels = {};
 const characterMixers = [];
 
@@ -433,6 +435,10 @@ function resetGame(message = "") {
 }
 
 function clearPieces() {
+  moveEffects.forEach((fx) => {
+    if (fx.object) root.remove(fx.object);
+  });
+  moveEffects.length = 0;
   pieces.forEach((piece) => {
     root.remove(piece);
   });
@@ -1002,19 +1008,34 @@ function executeMove(piece, toFile, toRank, by) {
 
   boardMap.delete(fromKey);
 
+  const now = clock.getElapsedTime();
+  const moveDuration = 0.42;
+  const pos = boardToWorld(toFile, toRank);
+  piece.userData.anim = {
+    fromX: piece.position.x,
+    fromZ: piece.position.z,
+    toX: pos.x,
+    toZ: pos.z,
+    start: now,
+    duration: moveDuration,
+    hop: target ? 1.1 : 0.7,
+  };
+
   if (target) {
     target.userData.captured = true;
-    target.visible = false;
     boardMap.delete(toKey);
+    moveEffects.push({
+      kind: "dying",
+      piece: target,
+      start: now + moveDuration * 0.85,
+      duration: 0.7,
+      burst: false,
+    });
   }
 
   boardMap.set(toKey, piece);
   piece.userData.file = toFile;
   piece.userData.rank = toRank;
-
-  const pos = boardToWorld(toFile, toRank);
-  piece.position.x = pos.x;
-  piece.position.z = pos.z;
 
   clearSelection();
 
@@ -1481,8 +1502,17 @@ function animate() {
   pieces.forEach((piece) => {
     if (piece.userData.captured) return;
 
-    const { bobSeed, bobAmp, baseY, baseScale } = piece.userData;
-    piece.position.y = baseY + Math.sin(t * 1.7 + bobSeed) * bobAmp;
+    const { bobSeed, bobAmp, baseY, baseScale, anim } = piece.userData;
+    let hopY = 0;
+    if (anim) {
+      const u = Math.min((t - anim.start) / anim.duration, 1);
+      const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      piece.position.x = anim.fromX + (anim.toX - anim.fromX) * e;
+      piece.position.z = anim.fromZ + (anim.toZ - anim.fromZ) * e;
+      hopY = Math.sin(Math.PI * u) * anim.hop;
+      if (u >= 1) piece.userData.anim = null;
+    }
+    piece.position.y = baseY + hopY + Math.sin(t * 1.7 + bobSeed) * bobAmp;
     const pulse = 1 + Math.sin(t * 1.2 + bobSeed) * 0.01;
     piece.scale.set(baseScale.x * pulse, baseScale.y * pulse, baseScale.z * pulse);
   });
@@ -1513,6 +1543,101 @@ function animate() {
     selectionRing.material.emissiveIntensity = 0.48 + Math.sin(t * 4.5) * 0.2;
   }
 
+  updateMoveEffects(t, dt);
+
   controls.update();
+  const shaking = t < cameraShake.until;
+  if (shaking) {
+    const k = ((cameraShake.until - t) / 0.3) * cameraShake.strength;
+    camera.position.x += (Math.random() - 0.5) * k;
+    camera.position.y += (Math.random() - 0.5) * k;
+  }
+  const renderPos = camera.position.clone();
   renderer.render(scene, camera);
+  if (shaking) camera.position.copy(renderPos);
+}
+
+function updateMoveEffects(t, dt) {
+  for (let i = moveEffects.length - 1; i >= 0; i -= 1) {
+    const fx = moveEffects[i];
+
+    if (fx.kind === "dying") {
+      if (t < fx.start) continue;
+      const piece = fx.piece;
+      if (!fx.burst) {
+        fx.burst = true;
+        fx.x = piece.position.x;
+        fx.z = piece.position.z;
+        spawnCaptureBurst(fx.x, fx.z, piece.userData.side);
+        cameraShake.until = t + 0.3;
+        cameraShake.strength = 0.5;
+      }
+      const u = Math.min((t - fx.start) / fx.duration, 1);
+      piece.position.set(fx.x, piece.userData.baseY + u * 2.4, fx.z);
+      piece.rotation.set(u * 2.2, u * 9, u * 1.4);
+      const shrink = Math.max(1 - u * u, 0.001);
+      piece.scale.set(piece.userData.baseScale.x * shrink, piece.userData.baseScale.y * shrink, piece.userData.baseScale.z * shrink);
+      if (u >= 1) {
+        piece.visible = false;
+        moveEffects.splice(i, 1);
+      }
+      continue;
+    }
+
+    fx.age += dt;
+    const u = fx.age / fx.life;
+    if (u >= 1) {
+      root.remove(fx.object);
+      fx.object.geometry.dispose();
+      fx.object.material.dispose();
+      moveEffects.splice(i, 1);
+      continue;
+    }
+
+    if (fx.kind === "ring") {
+      fx.object.scale.setScalar(1 + u * 5);
+      fx.object.material.opacity = 0.85 * (1 - u);
+    } else if (fx.kind === "sparks") {
+      const attr = fx.object.geometry.attributes.position;
+      for (let j = 0; j < fx.velocities.length; j += 1) {
+        const v = fx.velocities[j];
+        v.y -= 9 * dt;
+        attr.setXYZ(j, attr.getX(j) + v.x * dt, Math.max(attr.getY(j) + v.y * dt, boardTopY + 0.1), attr.getZ(j) + v.z * dt);
+      }
+      attr.needsUpdate = true;
+      fx.object.material.opacity = 1 - u;
+    }
+  }
+}
+
+function spawnCaptureBurst(x, z, side) {
+  const color = side === "red" ? 0xff6a4a : 0xbcd2ff;
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.5, 0.68, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  ring.rotation.x = -Math.PI * 0.5;
+  ring.position.set(x, boardTopY + 0.2, z);
+  root.add(ring);
+  moveEffects.push({ kind: "ring", object: ring, age: 0, life: 0.55 });
+
+  const count = 46;
+  const positions = new Float32Array(count * 3);
+  const velocities = [];
+  for (let i = 0; i < count; i += 1) {
+    positions.set([x, boardTopY + 0.6, z], i * 3);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 3.5;
+    velocities.push(new THREE.Vector3(Math.cos(angle) * speed, 3 + Math.random() * 4, Math.sin(angle) * speed));
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const sparks = new THREE.Points(
+    geometry,
+    new THREE.PointsMaterial({ color: 0xffd27a, size: 0.26, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending }),
+  );
+  sparks.frustumCulled = false;
+  root.add(sparks);
+  moveEffects.push({ kind: "sparks", object: sparks, velocities, age: 0, life: 0.9 });
 }
